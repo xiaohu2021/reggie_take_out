@@ -1,16 +1,16 @@
 package com.xiaohu.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xiaohu.reggie.common.R;
 import com.xiaohu.reggie.entity.Employee;
 import com.xiaohu.reggie.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.DigestUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
@@ -68,8 +68,8 @@ public class EmployeeController {
 
     //新增员工
     @PostMapping
-    public R<String> saveEmployee(HttpServletRequest request,@RequestBody Employee employee) {
-        log.info("新增员工,员工信息{}",employee.toString());
+    public R<String> saveEmployee(HttpServletRequest request, @RequestBody Employee employee) {
+        log.info("新增员工,员工信息{}", employee.toString());
         //设置初始密码123456，需要进行md5加密处理
         employee.setPassword(DigestUtils.md5DigestAsHex("123456".getBytes()));
         employee.setCreateTime(LocalDateTime.now());
@@ -79,9 +79,35 @@ public class EmployeeController {
         Long empId = (Long) request.getSession().getAttribute("employee");
         employee.setCreateUser(empId);
         employee.setUpdateUser(empId);
-        log.info("新增员工,员工信息{}",employee.toString());
+        log.info("新增员工,员工信息{}", employee.toString());
         employeeService.save(employee);
         return R.success("新增用户成功");
+    }
+
+
+    //分页功能开发
+    /**
+     * 员工信息分页查询
+     *
+     * @param page
+     * @param pageSize
+     * @param name
+     * @return
+     */
+    @GetMapping("/page")
+    public R<Page> page(int page, int pageSize, String name) {
+        log.info("page={},pageSize={},name={}", page, pageSize, name);
+        // 构造分页构造器
+        Page pageInfo = new Page(page, pageSize);
+        // 构造条件构造器
+        LambdaQueryWrapper<Employee> lqw = new LambdaQueryWrapper<>();
+        // 添加过滤条件
+        lqw.like(Strings.isNotEmpty(name), Employee::getName, name);
+        //添加排序条件
+        lqw.orderByDesc(Employee::getUpdateTime);
+
+        employeeService.page(pageInfo, lqw);
+        return R.success(pageInfo);
     }
 
 }
