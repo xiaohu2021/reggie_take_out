@@ -86,6 +86,7 @@ public class EmployeeController {
 
 
     //分页功能开发
+
     /**
      * 员工信息分页查询
      *
@@ -108,6 +109,36 @@ public class EmployeeController {
 
         employeeService.page(pageInfo, lqw);
         return R.success(pageInfo);
+    }
+
+    /**
+     * 根据id 修改员工信息
+     *
+     * @param employee
+     * @return
+     */
+    @PutMapping
+    public R<String> update(HttpServletRequest request, @RequestBody Employee employee) {
+        employee.setUpdateTime(LocalDateTime.now());
+        Long employeeId = (Long) request.getSession().getAttribute("employee");
+        employee.setUpdateUser(employeeId);
+        employeeService.updateById(employee);
+        return R.success("员工信息修改成功");
+    }
+
+    /**
+     * 根据id查询员工信息
+     * @param id
+     * @return
+     */
+    @GetMapping("/{id}")
+    public R<Employee> update(@PathVariable Long id) {
+       log.info("根据id查询员工信息.....");
+        Employee employee = employeeService.getById(id);
+        if(employee != null){
+            return R.success(employee);
+        }
+        return R.error("没有查询到对应员工信息");
     }
 
 }
