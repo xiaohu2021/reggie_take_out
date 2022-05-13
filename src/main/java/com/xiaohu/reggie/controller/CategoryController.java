@@ -45,22 +45,36 @@ public class CategoryController {
     }
 
     @DeleteMapping
-    public R<String> deleteRecord(Long ids){
-        log.info("这个id为：{}",ids);
+    public R<String> deleteRecord(Long ids) {
+        log.info("这个id为：{}", ids);
         categoryService.remove(ids);
         return R.success("删除成功");
     }
 
     /**
      * 根据id来修改分类信息
+     *
      * @param category
      * @return
      */
     @PutMapping
-    public R<String> update(@RequestBody Category category){
-        log.info("修改分类信息:{}",category);
+    public R<String> update(@RequestBody Category category) {
+        log.info("修改分类信息:{}", category);
         categoryService.updateById(category);
         return R.success("分类信息修改成功");
+    }
+
+    @GetMapping("/list")
+    public R<List<Category>> list(Category category) {
+        // 参数可以传 int type
+        LambdaQueryWrapper<Category> lqw = new LambdaQueryWrapper<>();
+        // lqw.eq(Category::getType, category.getType());
+        //添加条件
+        lqw.eq(category.getType() != null, Category::getType, category.getType());
+        //添加排序条件
+        lqw.orderByAsc(Category::getSort).orderByDesc(Category::getUpdateTime);
+        List<Category> list = categoryService.list(lqw);
+        return R.success(list);
     }
 
 }
