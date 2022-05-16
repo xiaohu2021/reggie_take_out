@@ -81,4 +81,14 @@ public class SetmealController {
         setmealService.removeWithDish(ids);
         return R.success("套餐数据删除成功");
     }
+
+    @GetMapping("/list")
+    public R<List<Setmeal>> list(Setmeal setmeal) {
+        LambdaQueryWrapper<Setmeal> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(setmeal.getCategoryId() != null, Setmeal::getCategoryId, setmeal.getCategoryId());
+        lqw.eq(setmeal.getStatus() != null, Setmeal::getStatus, setmeal.getStatus());
+       lqw.orderByDesc(Setmeal::getUpdateTime);
+        List<Setmeal> setmealList = setmealService.list(lqw);
+        return R.success(setmealList);
+    }
 }
