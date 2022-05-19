@@ -64,7 +64,7 @@ public class ShoppingCartController {
     public R<List<ShoppingCart>> list() {
         log.info("查看购物车.....");
         LambdaQueryWrapper<ShoppingCart> lqw = new LambdaQueryWrapper<>();
-        lqw.eq(ShoppingCart::getUserId,BaseContext.getCurrentId());
+        lqw.eq(ShoppingCart::getUserId, BaseContext.getCurrentId());
         lqw.orderByAsc(ShoppingCart::getCreateTime);
         List<ShoppingCart> list = shoppingCartService.list(lqw);
         return R.success(list);
@@ -72,13 +72,42 @@ public class ShoppingCartController {
 
     /**
      * 清空购物车
+     *
      * @return
      */
     @DeleteMapping("/clean")
-    public R<String> clean(){
+    public R<String> clean() {
         LambdaQueryWrapper<ShoppingCart> lqw = new LambdaQueryWrapper<>();
-        lqw.eq(ShoppingCart::getUserId,BaseContext.getCurrentId());
+        lqw.eq(ShoppingCart::getUserId, BaseContext.getCurrentId());
         shoppingCartService.remove(lqw);
         return R.success("清空购物车成功...");
+    }
+
+    @PostMapping("/sub")
+    public R<ShoppingCart> sub(@RequestBody ShoppingCart shoppingCart) {
+        log.info("购物车信息 shoppingCart: {}", shoppingCart);
+        LambdaQueryWrapper<ShoppingCart> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(ShoppingCart::getUserId, BaseContext.getCurrentId());
+        Long setmealId = shoppingCart.getSetmealId(); // 套餐id
+        Long dishId = shoppingCart.getDishId();
+        if (dishId != null) {
+            lqw.eq(ShoppingCart::getDishId, dishId);
+        } else {
+            lqw.eq(ShoppingCart::getSetmealId, setmealId);
+        }
+        ShoppingCart cartServiceOne = shoppingCartService.getOne(lqw);
+        if (cartServiceOne != null) {
+            Integer number = cartServiceOne.getNumber();
+            if (number > 1) {
+                cartServiceOne.setNumber(number - 1);
+                shoppingCartService.updateById(cartServiceOne);
+            }
+            if (number == 1) {
+                shoppingCartService.removeById(cartServiceOne);
+            }
+        } else {
+            R.error("购物车没有该选项");
+        }
+        return R.success(cartServiceOne);
     }
 }
