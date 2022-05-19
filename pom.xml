@@ -82,7 +82,7 @@
             <version>2.6.7</version>
         </dependency>
 
-         <!--短信服务-->
+        <!--短信服务-->
         <dependency>
             <groupId>com.aliyun</groupId>
             <artifactId>aliyun-java-sdk-core</artifactId>
@@ -92,6 +92,12 @@
             <groupId>com.aliyun</groupId>
             <artifactId>aliyun-java-sdk-dysmsapi</artifactId>
             <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <!--添加redis缓存-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
     </dependencies>
