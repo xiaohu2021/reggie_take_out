@@ -1,7 +1,9 @@
 package com.xiaohu.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.xiaohu.reggie.common.CustomException;
 import com.xiaohu.reggie.common.R;
 import com.xiaohu.reggie.dto.DishDto;
 import com.xiaohu.reggie.entity.Category;
@@ -17,6 +19,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -99,7 +102,7 @@ public class DishController {
         Set keys = redisTemplate.keys("dish_*");
         redisTemplate.delete(keys);
         // 精确清理 清理某个分类下面的菜品缓存数据
-        String key = "dish_"+dishDto.getCategoryId() + "_1";
+        String key = "dish_" + dishDto.getCategoryId() + "_1";
         redisTemplate.delete(key);
         return R.success("保存成功");
         //dishService
@@ -108,19 +111,18 @@ public class DishController {
     @GetMapping("/list")
     public R<List<DishDto>> list(Dish dish) {
         List<DishDto> dishDtoList = null;
-        // 动态构造key
-        String key = "dish_" + dish.getCategoryId() + "_" + dish.getStatus();
-        // 从redis 中获取缓存数据
-        dishDtoList = (List<DishDto>) redisTemplate.opsForValue().get(key);
-        // 如果存在 直接返回 无需查询数据库
-        if (dishDtoList != null) {
-            return R.success(dishDtoList);
-        }
-
+//        // 动态构造key
+//        String key = "dish_" + dish.getCategoryId() + "_" + dish.getStatus();
+//        // 从redis 中获取缓存数据
+//        dishDtoList = (List<DishDto>) redisTemplate.opsForValue().get(key);
+//        // 如果存在 直接返回 无需查询数据库
+//        if (dishDtoList != null) {
+//            return R.success(dishDtoList);
+//        }
         LambdaQueryWrapper<Dish> lqw = new LambdaQueryWrapper<>();
         // 查询 起售 状态的菜品 status=1
         lqw.eq(Dish::getStatus, 1);
-        lqw.eq(dish.getId() != null, Dish::getCategoryId, dish.getId());
+        lqw.eq(dish.getCategoryId() != null, Dish::getCategoryId, dish.getCategoryId());
         lqw.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
         List<Dish> dishList = dishService.list(lqw);
         dishDtoList = dishList.stream().map((res) -> {
@@ -140,8 +142,46 @@ public class DishController {
             return dishDto;
         }).collect(Collectors.toList());
         // 如果不存在 需要查询数据库 将查询到的菜品数据缓存
-        redisTemplate.opsForValue().set(key, dishDtoList, 60, TimeUnit.MINUTES);
+        // redisTemplate.opsForValue().set(key, dishDtoList, 60, TimeUnit.MINUTES);
         return R.success(dishDtoList);
+    }
+
+    /**
+     * 批量起售 停售 或单个起售 停售功能开发。
+     *
+     * @param status
+     * @param ids
+     * @return
+     */
+    @PostMapping("/status/{status}")
+    public R<String> status(@PathVariable int status, Long[] ids) {
+        log.info("status: {},ids:{}", status, ids);
+        if (ids == null || ids.length == 0) {
+            throw new CustomException("参数有误");
+        }
+        LambdaUpdateWrapper<Dish> lambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+        lambdaUpdateWrapper.set(Dish::getStatus, status).in(Dish::getId, ids);
+        dishService.update(lambdaUpdateWrapper);
+        return R.success(status == 1 ? "已起售" : "已停售");
+    }
+
+
+    @DeleteMapping
+    public R<String> deleteDish(Long[] ids) {
+        log.info("ids:{}", ids);
+        if (ids == null || ids.length == 0) {
+            throw new CustomException("未选择该删除的选项");
+        }
+        List<Dish> dishList = dishService.listByIds(Arrays.asList(ids));
+        for (Dish dish : dishList) {
+            if (dish.getStatus() == 1) {
+                throw new CustomException(dish.getName() + "商品为起售状态不能删除");
+            }
+        }
+        LambdaUpdateWrapper<Dish> dishLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+        dishLambdaUpdateWrapper.set(Dish::getIsDeleted, 1).in(Dish::getId, ids);
+        dishService.update(dishLambdaUpdateWrapper);
+        return R.success("删除成功");
     }
 
 }
